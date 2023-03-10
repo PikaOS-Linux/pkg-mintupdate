@@ -23,19 +23,23 @@ import setproctitle
 try:
     import cinnamon
     CINNAMON_SUPPORT = True
-except:
+except Exception as e:
+    if os.getenv("DEBUG"):
+        print("No cinnamon update support:\n%s" % traceback.format_exc())
     CINNAMON_SUPPORT = False
 
 try:
     import flatpakUpdater
     FLATPAK_SUPPORT = True
 except Exception as e:
+    if os.getenv("DEBUG"):
+        print("No flatpak update support:\n%s" % traceback.format_exc())
     FLATPAK_SUPPORT = False
 
 from kernelwindow import KernelWindow
 gi.require_version('Gtk', '3.0')
 gi.require_version('Notify', '0.7')
-from gi.repository import Gtk, Gdk, Gio, GLib, Notify, Pango
+from gi.repository import Gtk, Gdk, Gio, GLib, GObject, Notify, Pango
 
 from Classes import Update, PRIORITY_UPDATES, UpdateTracker
 from xapp.GSettingsWidgets import *
@@ -110,7 +114,7 @@ class CacheWatcher(threading.Thread):
                 try:
                     cachetime = os.path.getmtime(self.pkgcache)
                     statustime = os.path.getmtime(self.dpkgstatus)
-                    if (not cachetime == self.cachetime or not statustime == self.statustime) and \
+                    if (cachetime != self.cachetime or statustime != self.statustime) and \
                         not self.application.dpkg_locked():
                         self.cachetime = cachetime
                         self.statustime = statustime
@@ -258,24 +262,24 @@ class ChangelogRetriever(threading.Thread):
             changelog_sources.append("http://packages.linuxmint.com/dev/" + self.source_package + "_" + self.version + "_i386.changes")
         elif self.origin == "ubuntu":
             if (self.source_package.startswith("lib")):
-                changelog_sources.append("http://changelogs.ubuntu.com/changelogs/pool/main/%s/%s/%s_%s/changelog" % (self.source_package[0:4], self.source_package, self.source_package, self.version))
-                changelog_sources.append("http://changelogs.ubuntu.com/changelogs/pool/multiverse/%s/%s/%s_%s/changelog" % (self.source_package[0:4], self.source_package, self.source_package, self.version))
-                changelog_sources.append("http://changelogs.ubuntu.com/changelogs/pool/universe/%s/%s/%s_%s/changelog" % (self.source_package[0:4], self.source_package, self.source_package, self.version))
-                changelog_sources.append("http://changelogs.ubuntu.com/changelogs/pool/restricted/%s/%s/%s_%s/changelog" % (self.source_package[0:4], self.source_package, self.source_package, self.version))
+                changelog_sources.append("https://changelogs.ubuntu.com/changelogs/pool/main/%s/%s/%s_%s/changelog" % (self.source_package[0:4], self.source_package, self.source_package, self.version))
+                changelog_sources.append("https://changelogs.ubuntu.com/changelogs/pool/multiverse/%s/%s/%s_%s/changelog" % (self.source_package[0:4], self.source_package, self.source_package, self.version))
+                changelog_sources.append("https://changelogs.ubuntu.com/changelogs/pool/universe/%s/%s/%s_%s/changelog" % (self.source_package[0:4], self.source_package, self.source_package, self.version))
+                changelog_sources.append("https://changelogs.ubuntu.com/changelogs/pool/restricted/%s/%s/%s_%s/changelog" % (self.source_package[0:4], self.source_package, self.source_package, self.version))
             else:
-                changelog_sources.append("http://changelogs.ubuntu.com/changelogs/pool/main/%s/%s/%s_%s/changelog" % (self.source_package[0], self.source_package, self.source_package, self.version))
-                changelog_sources.append("http://changelogs.ubuntu.com/changelogs/pool/multiverse/%s/%s/%s_%s/changelog" % (self.source_package[0], self.source_package, self.source_package, self.version))
-                changelog_sources.append("http://changelogs.ubuntu.com/changelogs/pool/universe/%s/%s/%s_%s/changelog" % (self.source_package[0], self.source_package, self.source_package, self.version))
-                changelog_sources.append("http://changelogs.ubuntu.com/changelogs/pool/restricted/%s/%s/%s_%s/changelog" % (self.source_package[0], self.source_package, self.source_package, self.version))
+                changelog_sources.append("https://changelogs.ubuntu.com/changelogs/pool/main/%s/%s/%s_%s/changelog" % (self.source_package[0], self.source_package, self.source_package, self.version))
+                changelog_sources.append("https://changelogs.ubuntu.com/changelogs/pool/multiverse/%s/%s/%s_%s/changelog" % (self.source_package[0], self.source_package, self.source_package, self.version))
+                changelog_sources.append("https://changelogs.ubuntu.com/changelogs/pool/universe/%s/%s/%s_%s/changelog" % (self.source_package[0], self.source_package, self.source_package, self.version))
+                changelog_sources.append("https://changelogs.ubuntu.com/changelogs/pool/restricted/%s/%s/%s_%s/changelog" % (self.source_package[0], self.source_package, self.source_package, self.version))
         elif self.origin == "debian":
             if (self.source_package.startswith("lib")):
-                changelog_sources.append("http://metadata.ftp-master.debian.org/changelogs/main/%s/%s/%s_%s_changelog" % (self.source_package[0:4], self.source_package, self.source_package, self.version))
-                changelog_sources.append("http://metadata.ftp-master.debian.org/changelogs/contrib/%s/%s/%s_%s_changelog" % (self.source_package[0:4], self.source_package, self.source_package, self.version))
-                changelog_sources.append("http://metadata.ftp-master.debian.org/changelogs/non-free/%s/%s/%s_%s_changelog" % (self.source_package[0:4], self.source_package, self.source_package, self.version))
+                changelog_sources.append("https://metadata.ftp-master.debian.org/changelogs/main/%s/%s/%s_%s_changelog" % (self.source_package[0:4], self.source_package, self.source_package, self.version))
+                changelog_sources.append("https://metadata.ftp-master.debian.org/changelogs/contrib/%s/%s/%s_%s_changelog" % (self.source_package[0:4], self.source_package, self.source_package, self.version))
+                changelog_sources.append("https://metadata.ftp-master.debian.org/changelogs/non-free/%s/%s/%s_%s_changelog" % (self.source_package[0:4], self.source_package, self.source_package, self.version))
             else:
-                changelog_sources.append("http://metadata.ftp-master.debian.org/changelogs/main/%s/%s/%s_%s_changelog" % (self.source_package[0], self.source_package, self.source_package, self.version))
-                changelog_sources.append("http://metadata.ftp-master.debian.org/changelogs/contrib/%s/%s/%s_%s_changelog" % (self.source_package[0], self.source_package, self.source_package, self.version))
-                changelog_sources.append("http://metadata.ftp-master.debian.org/changelogs/non-free/%s/%s/%s_%s_changelog" % (self.source_package[0], self.source_package, self.source_package, self.version))
+                changelog_sources.append("https://metadata.ftp-master.debian.org/changelogs/main/%s/%s/%s_%s_changelog" % (self.source_package[0], self.source_package, self.source_package, self.version))
+                changelog_sources.append("https://metadata.ftp-master.debian.org/changelogs/contrib/%s/%s/%s_%s_changelog" % (self.source_package[0], self.source_package, self.source_package, self.version))
+                changelog_sources.append("https://metadata.ftp-master.debian.org/changelogs/non-free/%s/%s/%s_%s_changelog" % (self.source_package[0], self.source_package, self.source_package, self.version))
         elif self.origin.startswith("LP-PPA"):
             ppa_owner, ppa_name = self.get_ppa_info()
             if ppa_owner and ppa_name:
@@ -398,7 +402,7 @@ class AutomaticRefreshThread(threading.Thread):
 class InstallThread(threading.Thread):
 
     def __init__(self, application):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, name="mintupdate-install-thread")
         self.application = application
         self.application.window.get_window().set_cursor(Gdk.Cursor(Gdk.CursorType.WATCH))
         self.application.window.set_sensitive(False)
@@ -622,9 +626,7 @@ class InstallThread(threading.Thread):
             if update_flatpaks and proceed:
                 self.application.flatpak_updater.perform_updates()
                 if self.application.flatpak_updater.error != None:
-                    Gdk.threads_enter()
-                    self.application.set_status_message(self.application.flatpak_updater.error)
-                    Gdk.threads_leave()
+                    self.application.set_status_message_from_thread(self.application.flatpak_updater.error)
                 needs_refresh = True
 
             if proceed and len(cinnamon_spices) > 0:
@@ -702,7 +704,7 @@ class InstallThread(threading.Thread):
 class RefreshThread(threading.Thread):
 
     def __init__(self, application, root_mode=False):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, name="mintupdate-refresh-thread")
         self.root_mode = root_mode
         self.application = application
         self.running = False
@@ -786,7 +788,7 @@ class RefreshThread(threading.Thread):
             self.application.set_status(_("Checking for package updates"), _("Checking for updates"), "mintupdate-checking-symbolic", not self.application.settings.get_boolean("hide-systray"))
             Gdk.threads_leave()
 
-            model = Gtk.TreeStore(bool, str, str, str, str, int, str, str, str, str, str, object)
+            model = Gtk.TreeStore(bool, str, str, str, str, GObject.TYPE_LONG, str, str, str, str, str, object)
             # UPDATE_CHECKED, UPDATE_DISPLAY_NAME, UPDATE_OLD_VERSION, UPDATE_NEW_VERSION, UPDATE_SOURCE,
             # UPDATE_SIZE, UPDATE_SIZE_STR, UPDATE_TYPE_PIX, UPDATE_TYPE, UPDATE_TOOLTIP, UPDATE_SORT_STR, UPDATE_OBJ
 
@@ -804,7 +806,7 @@ class RefreshThread(threading.Thread):
             if CINNAMON_SUPPORT:
                 if self.root_mode:
                     self.application.logger.write("Refreshing available Cinnamon updates from the server")
-                    self.application.set_status_message(_("Checking for Cinnamon spices"))
+                    self.application.set_status_message_from_thread(_("Checking for Cinnamon spices"))
                     for spice_type in cinnamon.updates.SPICE_TYPES:
                         try:
                             self.application.cinnamon_updater.refresh_cache_for_type(spice_type)
@@ -813,12 +815,12 @@ class RefreshThread(threading.Thread):
                             print("-- Exception occurred fetching Cinnamon %ss:\n%s" % (spice_type, traceback.format_exc()))
 
             if FLATPAK_SUPPORT:
-                # if self.root_mode:
-                self.application.logger.write("Refreshing available Flatpak updates")
-                self.application.set_status_message(_("Checking for Flatpak updates"))
-                self.application.flatpak_updater.refresh()
+                if self.root_mode:
+                    self.application.logger.write("Refreshing available Flatpak updates")
+                    self.application.set_status_message_from_thread(_("Checking for Flatpak updates"))
+                    self.application.flatpak_updater.refresh()
 
-            self.application.set_status_message(_("Processing updates"))
+            self.application.set_status_message_from_thread(_("Processing updates"))
 
             if os.getenv("MINTUPDATE_TEST") == None:
                 output = subprocess.run("/usr/lib/linuxmint/mintUpdate/checkAPT.py", stdout=subprocess.PIPE).stdout.decode("utf-8")
@@ -844,24 +846,7 @@ class RefreshThread(threading.Thread):
             # Check presence of Mint layer
             (mint_layer_found, error_msg) = self.check_policy()
             if os.getenv("MINTUPDATE_TEST") == "layer-error" or (not mint_layer_found):
-                error_found = True
-                self.application.logger.write_error("Error: The APT policy is incorrect!")
-
-                label1 = _("Your APT configuration is corrupt.")
-                label2 = _("Do not install or update anything, it could break your operating system!")
-                label3 = _("To switch to a different Linux Mint mirror and solve this problem, click OK.")
-
-                msg = _("Your APT configuration is corrupt.")
-                if error_msg:
-                    error_msg = "\n\n%s\n%s" % (_("APT error:"), error_msg)
-                else:
-                    error_msg = ""
-                self.application.show_infobar(_("Please switch to another Linux Mint mirror"),
-                    msg, Gtk.MessageType.ERROR,
-                    callback=self._on_infobar_mintsources_response)
-                self.application.set_status(_("Could not refresh the list of updates"),
-                    "%s\n%s" % (label1, label2), "mintupdate-error-symbolic", True)
-                self.application.builder.get_object("label_error_details").set_markup("<b>%s\n%s\n%s%s</b>" % (label1, label2, label3, error_msg))
+                error_found = False
 
             if error_found:
                 Gdk.threads_enter()
@@ -885,7 +870,7 @@ class RefreshThread(threading.Thread):
             lines = output.split("---EOL---")
             if len(lines):
                 for line in lines:
-                    if not "###" in line:
+                    if "###" not in line:
                         continue
 
                     # Create update object
@@ -1017,7 +1002,7 @@ class RefreshThread(threading.Thread):
                 if self.application.flatpak_updater.error == None:
                     for update in self.application.flatpak_updater.updates:
                         update.type = "flatpak"
-                        if update.ref_str in blacklist or update.source_packages[0] in blacklist:
+                        if update.ref_name in blacklist or update.source_packages[0] in blacklist:
                             continue
                         if update.flatpak_type == "app":
                             tooltip = _("Flatpak application")
@@ -1046,7 +1031,7 @@ class RefreshThread(threading.Thread):
                         model.set_value(iter, UPDATE_TYPE_PIX, "mintupdate-type-flatpak-symbolic")
                         model.set_value(iter, UPDATE_TYPE, "flatpak")
                         model.set_value(iter, UPDATE_TOOLTIP, tooltip)
-                        model.set_value(iter, UPDATE_SORT_STR, "%s%s" % (str(type_sort_key), update.ref_str))
+                        model.set_value(iter, UPDATE_SORT_STR, "%s%s" % (str(type_sort_key), update.ref_name))
                         model.set_value(iter, UPDATE_OBJ, update)
                         num_software += 1
                         num_visible += 1
@@ -1241,7 +1226,7 @@ class RefreshThread(threading.Thread):
                             for pkg2 in changes:
                                 if o.name == pkg2.name:
                                     pkgFound = True
-                            if pkgFound == False:
+                            if not pkgFound:
                                 newPkg = cache[o.name]
                                 changes.append(newPkg)
                                 foundSomething = True
@@ -1725,6 +1710,11 @@ class MintUpdate():
 
     def set_status_message(self, message):
         self.statusbar.push(self.context_id, message)
+
+    def set_status_message_from_thread(self, message):
+        Gdk.threads_enter()
+        self.set_status_message(message)
+        Gdk.threads_leave()
 
     def set_status(self, message, tooltip, icon, visible):
         self.set_status_message(message)
@@ -2254,7 +2244,7 @@ class MintUpdate():
         dlg.set_version("__DEB_VERSION__")
         dlg.set_icon_name("mintupdate")
         dlg.set_logo_icon_name("mintupdate")
-        dlg.set_website("http://www.github.com/linuxmint/mintupdate")
+        dlg.set_website("https://www.github.com/linuxmint/mintupdate")
         def close(w, res):
             if res == Gtk.ResponseType.CANCEL or res == Gtk.ResponseType.DELETE_EVENT:
                 w.destroy()

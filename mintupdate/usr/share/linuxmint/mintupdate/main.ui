@@ -788,7 +788,7 @@
                       <object class="GtkLabel" id="label_welcome10">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">Linux Mint recommends to set up automated system snapshots and to apply all available updates. This way, your computer is always secure and you can go back in time and recover from any potential regression.</property>
+                        <property name="label" translatable="yes">PikaOS recommends to set up automated system snapshots and to apply all available updates. This way, your computer is always secure and you can go back in time and recover from any potential regression.</property>
                         <property name="wrap">True</property>
                       </object>
                       <packing>
