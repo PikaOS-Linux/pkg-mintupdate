@@ -1,0 +1,29 @@
+#!/usr/bin/make -f
+
+DEB_VERSION := $(shell dpkg-parsechangelog | egrep '^Version:' | cut -f 2 -d ' ')
+
+%:
+	dh ${@}
+
+override_dh_install:
+	dh_install
+	mkdir -p debian/mintupdate/usr/lib/mintbin/
+	# Move main mintupdate
+	mv debian/mintupdate/usr/bin/mintupdate debian/mintupdate/usr/lib/mintbin/
+	chmod +x debian/mintupdate/usr/lib/mintbin/mintupdate
+	# Move main mintupdate-launcher
+	mv debian/mintupdate/usr/bin/mintupdate-launcher debian/mintupdate/usr/lib/mintbin/
+	chmod +x debian/mintupdate/usr/lib/mintbin/mintupdate-launcher
+	# Add xwayland mintupdate
+	cp debian/extras/mintupdate debian/mintupdate/usr/bin/
+	chmod +x debian/mintupdate/usr/bin/mintupdate
+	# Add xwayland mintupdate-launcher
+	cp debian/extras/mintupdate-launcher debian/mintupdate/usr/bin/
+	chmod +x debian/mintupdate/usr/bin/mintupdate-launcher
+	cp debian/extras/main.ui debian/mintupdate/usr/share/linuxmint/mintupdate/
+# Inject version number in the code
+override_dh_installdeb:
+	dh_installdeb
+	for pkg in $$(dh_listpackages -i); do \
+		find debian/$$pkg -type f -exec sed -i -e s/__DEB_VERSION__/$(DEB_VERSION)/g {} +; \
+	done
